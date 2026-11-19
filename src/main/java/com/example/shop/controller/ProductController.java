@@ -1,0 +1,55 @@
+package com.example.shop.controller;
+
+import com.example.shop.dto.ProductDto;
+import com.example.shop.service.ProductService;
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/products")
+public class ProductController {
+    private final ProductService productService;
+    public ProductController(ProductService productService) { this.productService = productService; }
+
+    // Lecture : USER, ADMIN et MANAGER (pagination du LAB 3, valeurs par défaut)
+    @GetMapping
+    @PreAuthorize("hasAnyRole('USER','ADMIN','MANAGER')")
+    public Page<ProductDto> getAll(@RequestParam(defaultValue = "0") int page,
+                                   @RequestParam(defaultValue = "10") int size,
+                                   @RequestParam(defaultValue = "id") String sort) {
+        return productService.findAll(PageRequest.of(page, size, Sort.by(sort)));
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('USER','ADMIN','MANAGER')")
+    public ResponseEntity<ProductDto> get(@PathVariable Long id) {
+        return ResponseEntity.ok(productService.getById(id));
+    }
+
+    // Création : ADMIN et MANAGER (exercice 1)
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    public ResponseEntity<ProductDto> create(@Valid @RequestBody ProductDto dto) {
+        return new ResponseEntity<>(productService.create(dto), HttpStatus.CREATED);
+    }
+
+    // Modification et suppression : ADMIN uniquement
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ProductDto> update(@PathVariable Long id, @Valid @RequestBody ProductDto dto) {
+        return ResponseEntity.ok(productService.update(id, dto));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        productService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+}
